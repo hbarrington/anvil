@@ -1,6 +1,6 @@
 # AI AGENT SOFTWARE DEVELOPMENT PLAN
-**Version**: 3.0.1
-**Last Updated**: October 25, 2025
+**Version**: 3.0.2
+**Last Updated**: July 25, 2026
 **Author**: Darcy Davidson
 
 ## Overview
@@ -1252,6 +1252,15 @@ erDiagram
     %% Add relationships and more entities here
 ```
 ### Class Diagrams
+
+> **Note for AI**: When generating class diagrams, use mermaid-safe type names. Do not use programming language-specific syntax that contains special characters which will cause mermaid parse errors:
+> - Replace pointer types (`*Type`) with the base type name (`Type`)
+> - Replace channel types (`chan struct{}`) with `channel`
+> - Replace tuple/multi-value returns (`(*Type, error)`) with the primary return type (`Type`)
+> - Replace generic or parameterized types (`map[string]interface{}`) with simplified names (`Map`)
+> - Replace qualified types (`sync.Mutex`) with the short name (`Mutex`)
+> - Avoid curly braces `{}`, angle brackets `<>`, and square brackets `[]` inside member definitions
+
 ```mermaid
 classDiagram
     class ENB_XXXXXX_Class {
