@@ -73,6 +73,7 @@ interface Config {
   analysisReview?: string
   codeReview?: string
   description?: string
+  todoTracking?: boolean
   [key: string]: unknown
 }
 
@@ -114,6 +115,7 @@ type AppAction =
 interface AppContextValue extends AppState {
   loadData: () => Promise<void>
   loadDataWithDependencies: () => Promise<unknown>
+  loadConfig: () => Promise<void>
   setSelectedCapability: (capability: Capability | null) => void
   setSelectedDocument: (document: SelectedDocument | null) => void
   addToHistory: (item: NavigationHistoryItem) => void
@@ -673,6 +675,7 @@ export function AppProvider({ children }: AppProviderProps): JSX.Element {
     ...state,
     loadData,
     loadDataWithDependencies,
+    loadConfig,
     setSelectedCapability,
     setSelectedDocument,
     addToHistory,

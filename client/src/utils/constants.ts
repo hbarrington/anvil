@@ -44,6 +44,11 @@ export const STATUS_VALUES = {
     IN_DRAFT: 'In Draft',
     RETIRED: 'Retired',
     VERIFIED: 'Verified'
+  } as const,
+  TODO: {
+    TO_DO: 'To Do',
+    IN_PROGRESS: 'In Progress',
+    DONE: 'Done'
   } as const
 } as const
 
@@ -72,6 +77,13 @@ export const REVIEW_VALUES = {
   NOT_REQUIRED: 'Not Required'
 } as const
 
+// Ordered list of To Do statuses for dropdowns and grouping
+export const TODO_STATUS_OPTIONS = [
+  STATUS_VALUES.TODO.TO_DO,
+  STATUS_VALUES.TODO.IN_PROGRESS,
+  STATUS_VALUES.TODO.DONE
+] as const
+
 // Default values for new documents
 export const DEFAULT_VALUES = {
   STATUS: STATUS_VALUES.ENABLER.IN_DRAFT,
@@ -79,6 +91,7 @@ export const DEFAULT_VALUES = {
   APPROVAL: APPROVAL_VALUES.NOT_APPROVED,
   PRIORITY_CAPABILITY: PRIORITY_VALUES.CAPABILITY_ENABLER.HIGH,
   PRIORITY_REQUIREMENT: PRIORITY_VALUES.REQUIREMENT.MUST_HAVE,
+  STATUS_TODO: STATUS_VALUES.TODO.TO_DO,
   ANALYSIS_REVIEW: REVIEW_VALUES.REQUIRED,
   DESIGN_REVIEW: REVIEW_VALUES.REQUIRED,
   CODE_REVIEW: REVIEW_VALUES.NOT_REQUIRED
@@ -88,6 +101,7 @@ export const DEFAULT_VALUES = {
 export type CapabilityStatus = typeof STATUS_VALUES.CAPABILITY[keyof typeof STATUS_VALUES.CAPABILITY]
 export type EnablerStatus = typeof STATUS_VALUES.ENABLER[keyof typeof STATUS_VALUES.ENABLER]
 export type RequirementStatus = typeof STATUS_VALUES.REQUIREMENT[keyof typeof STATUS_VALUES.REQUIREMENT]
+export type TodoStatus = typeof STATUS_VALUES.TODO[keyof typeof STATUS_VALUES.TODO]
 export type ApprovalValue = typeof APPROVAL_VALUES[keyof typeof APPROVAL_VALUES]
 export type PriorityValue = typeof PRIORITY_VALUES.CAPABILITY_ENABLER[keyof typeof PRIORITY_VALUES.CAPABILITY_ENABLER] | typeof PRIORITY_VALUES.REQUIREMENT[keyof typeof PRIORITY_VALUES.REQUIREMENT]
 export type ReviewValue = typeof REVIEW_VALUES[keyof typeof REVIEW_VALUES]

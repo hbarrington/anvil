@@ -5,6 +5,8 @@ import { generateFunctionalRequirementId, generateNonFunctionalRequirementId } f
 import { stateListenerManager } from '../../utils/stateListeners'
 import { STATUS_VALUES, APPROVAL_VALUES, PRIORITY_VALUES, REVIEW_VALUES } from '../../utils/constants'
 import { SearchableSelect } from '../ui/SearchableSelect'
+import TodoSection from './TodoSection'
+import { useApp } from '../../contexts/AppContext'
 import toast from 'react-hot-toast'
 
 import { EnablerFormData, FunctionalRequirement, NonFunctionalRequirement, Dependency, generateEnablerTechnicalSpecificationsTemplate } from '../../utils/markdownUtils'
@@ -184,6 +186,7 @@ function BulkEditPanel({ onBulkEdit, requirementCount, fieldType, selectedRequir
 }
 
 function EnablerForm({ data, onChange, onValidationChange }: EnablerFormProps): JSX.Element {
+  const { config } = useApp()
   const [availableCapabilities, setAvailableCapabilities] = useState<CapabilityLink[]>([])
   const [availableEnablers, setAvailableEnablers] = useState<EnablerLink[]>([])
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -421,6 +424,10 @@ function EnablerForm({ data, onChange, onValidationChange }: EnablerFormProps): 
 
     onChange({ [field]: newArray })
   }, [data, onChange])
+
+  const handleTodosChange = useCallback((todos) => {
+    onChange({ todos })
+  }, [onChange])
 
   // Memoize templates and dropdown options
   const templates = useMemo(() => ({
@@ -1450,6 +1457,11 @@ function EnablerForm({ data, onChange, onValidationChange }: EnablerFormProps): 
           </div>
         </div>
       </div>
+
+      {/* To Do */}
+      {config?.todoTracking !== false && (
+        <TodoSection todos={data.todos} onChange={handleTodosChange} />
+      )}
     </div>
   )
 }

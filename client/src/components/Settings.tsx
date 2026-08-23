@@ -11,6 +11,7 @@ interface DefaultsConfig {
   owner: string
   analysisReview: string
   codeReview: string
+  todoTracking?: boolean
 }
 
 interface TipConfig {
@@ -25,7 +26,7 @@ interface Config {
 }
 
 export default function Settings(): React.ReactElement {
-  const { refreshData } = useApp()
+  const { refreshData, loadConfig: reloadAppConfig } = useApp()
   const [config, setConfig] = useState<Config | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [saving, setSaving] = useState<boolean>(false)
@@ -66,6 +67,9 @@ export default function Settings(): React.ReactElement {
         throw new Error('Failed to save configuration')
       }
 
+      // Refresh the app-wide config so changes such as To Do tracking apply immediately
+      await reloadAppConfig()
+
       toast.success('Configuration saved successfully')
     } catch (error) {
       toast.error('Failed to save configuration')
@@ -76,7 +80,7 @@ export default function Settings(): React.ReactElement {
   }
 
 
-  const updateNestedConfigField = (section: keyof Config, field: string, value: string | number): void => {
+  const updateNestedConfigField = (section: keyof Config, field: string, value: string | number | boolean): void => {
     if (!config) return
     setConfig({
       ...config,
@@ -132,6 +136,24 @@ export default function Settings(): React.ReactElement {
                   className="w-full px-3 py-2 bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                 />
               </div>
+              <div className="pt-2 border-t border-border">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="todoTracking"
+                    checked={config.defaults?.todoTracking !== false}
+                    onChange={(e) => updateNestedConfigField('defaults', 'todoTracking', e.target.checked)}
+                    className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-ring focus:ring-2"
+                  />
+                  <label htmlFor="todoTracking" className="text-sm font-medium text-foreground">
+                    Enable To Do Tracking
+                  </label>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Show the To Do section in the explorer panel, the capability and enabler viewers, and the document editors.
+                </p>
+              </div>
+
               <div className="flex justify-end">
                 <button
                   onClick={saveConfig}

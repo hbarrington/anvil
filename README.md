@@ -1,7 +1,7 @@
 # Anvil
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-3.5.4-green.svg)]()
+[![Version](https://img.shields.io/badge/version-3.6.0-green.svg)]()
 
 ## Overview
 
@@ -336,6 +336,22 @@ Claude Code will automatically:
 - **Enabler Filtering**: Toggle to show all enablers or filter by selected capability
 - **Approval Management**: Bulk approval features for enablers and requirements
 
+### To Do Tracking (v3.6.0)
+- **To Do Section**: Every capability and enabler carries a `## To Do` section directly below Technical Specifications
+- **Four Fields**: Each to do has an **Order**, **Name**, **Description**, and **Status** (To Do | In Progress | Done)
+- **Ordered Lists**: To dos are listed by their Order number, lowest first, in the explorer, the capability and enabler views, and the editors
+- **List Editing**: Add, edit, renumber, reorder (drag handle), and remove to dos in Edit mode, the same way enablers are added to capabilities and requirements to enablers
+- **Your Numbering, Untouched**: Order numbers are never rewritten for you - start at any number and leave whatever gaps you like. Typing a new Order re-sorts the list on blur, and dragging a to do moves it between the existing numbers rather than renumbering the list
+- **Explorer To Do Panel**: A TO DO section at the bottom of the left explorer, with the same filter and add controls as the Enablers section
+- **Filter Toggle**: Filter on shows the to dos of the current selection - the selected enabler when one is open, otherwise the selected capability. Filter off lists every to do in the workspace
+- **Numbered Badges**: Each to do shows its Order in a small numbered circle at the right of the row
+- **Check Off From the Explorer**: Each to do has a checkbox at the left of the row - checking it sets the status to Done, unchecking it returns it to To Do, written straight back to the document without reformatting anything else
+- **Add From the Explorer**: The + button adds a to do to the selected capability or enabler
+- **Resizable Panel**: A grabber bar above the TO DO section drags up and down to give the list more or less room, matching the Capabilities/Enablers resizer
+- **Status at a Glance**: Status counts in the editor (To Do / In Progress / Done); in the explorer the checkbox and strike-through show completion without extra labels
+- **Configurable**: `Settings -> Basic Configuration -> Enable To Do Tracking` turns the To Do section on or off across the explorer, the capability and enabler viewers, and the document editors
+- **Markdown Native**: To dos are stored as a plain markdown table, so they travel with the document and stay readable outside Anvil
+
 ### Document Creation & Management
 - **Create New Capabilities**: Generate new capability documents from templates
 - **Create New Enablers**: Generate new enabler documents from templates
@@ -406,9 +422,21 @@ Anvil supports **workspace-based configuration** for managing multiple document 
   "ui": {
     "title": "Anvil",
     "description": "Product Requirements Document Browser"
+  },
+  "defaults": {
+    "owner": "Product Team",
+    "analysisReview": "Required",
+    "designReview": "Required",
+    "codeReview": "Not Required",
+    "todoTracking": true
   }
 }
 ```
+
+### Default Settings
+- **owner**: Default owner applied to new documents
+- **analysisReview / designReview / codeReview**: Default review requirements for new documents
+- **todoTracking**: Enables the To Do section in the explorer, the capability and enabler viewers, and the document editors. Toggle it from `Settings -> Basic Configuration -> Enable To Do Tracking`. When omitted, To Do tracking is enabled.
 
 ## API Endpoints
 
@@ -439,6 +467,7 @@ Anvil supports **workspace-based configuration** for managing multiple document 
 
 ### 📋 **Recent Major Features Summary**
 
+- **v3.6.0**: ✅ **To Do Tracking** - Track ordered to dos (Order, Name, Description, Status) on every capability and enabler, edit them as a list in Edit mode, browse them in the new explorer TO DO panel, and switch the whole feature on or off from Settings
 - **v3.5.0**: 🔢 **9-Digit ID System** - Upgraded unique ID generation from 6 to 9 digits (CAP-123456789, ENB-987654321, etc.) across all components for enhanced uniqueness and reduced collision probability
 - **v3.4.39**: 📝 **Development Plan Minor Update** - Fixed step numbering and clarified implementation workflow in SOFTWARE_DEVELOPMENT_PLAN.md
 - **v3.4.38**: 📋 **Development Plan Enhancement** - Enhanced SOFTWARE_DEVELOPMENT_PLAN.md with stricter design completion gates, placeholder capability styling rules, and improved workflow verification steps
@@ -1107,6 +1136,19 @@ Anvil now includes a comprehensive **Claude Code Subagent System** that transfor
 - **REACT + NODE.JS**: Modern full-stack application with React frontend and Node.js Express backend
 
 ## Changelog
+
+### v3.6.0 - To Do Tracking (2026-08-22)
+- **✨ Feature**: Added a `## To Do` section to capability and enabler documents, positioned below Technical Specifications
+- **✨ Feature**: To dos have an Order, Name, Description, and Status (To Do | In Progress | Done)
+- **🔢 Ordering**: To do lists are sorted by Order (lowest first) in the explorer, the document views, and the editors; Order numbers are author-controlled and are never automatically renumbered
+- **📝 Editor**: To dos are managed as a list in Edit mode for both capabilities and enablers, with drag-to-reorder and remove actions
+- **🧭 Explorer**: New TO DO section in the left explorer with filter and add controls matching the Enablers section - filter on follows the selection, filter off lists every to do in the workspace
+- **☑️ Quick Complete**: Check a to do off directly in the explorer to mark it Done, or uncheck it to return it to To Do; only that one table cell is rewritten in the document
+- **↕️ Resizable**: A grabber bar above the TO DO section resizes the list, the same way the Capabilities and Enablers sections resize
+- **➕ Quick Add**: The + button on the TO DO header adds a to do to the selected capability or enabler
+- **⚙️ Settings**: New `Enable To Do Tracking` option in Basic Configuration controls To Do visibility in the explorer, the document viewers, and the editors
+- **📄 Templates**: Capability and enabler templates in SOFTWARE_DEVELOPMENT_PLAN.md now include an empty To Do table
+- **🔧 Technical**: To do tables are parsed and regenerated on both the client and the server, and are preserved across Technical Specifications and Development Plan sections
 
 ### v3.5.3 - UI Enhancement (2025-01-24)
 - **✨ Enhancement**: Increased ID column width in Functional and Non-Functional Requirements tables for better visibility

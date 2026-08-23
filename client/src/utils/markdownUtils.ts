@@ -34,6 +34,13 @@ export interface NonFunctionalRequirement {
   approval: string
 }
 
+export interface Todo {
+  order: number
+  name: string
+  description: string
+  status: string
+}
+
 export interface CapabilityFormData {
   name: string
   owner: string
@@ -54,6 +61,7 @@ export interface CapabilityFormData {
   externalDownstream?: string
   enablers?: Enabler[]
   technicalSpecifications?: string
+  todos?: Todo[]
   implementationPlan?: string
 }
 
@@ -77,6 +85,7 @@ export interface EnablerFormData {
   functionalRequirements?: FunctionalRequirement[]
   nonFunctionalRequirements?: NonFunctionalRequirement[]
   technicalSpecifications?: string
+  todos?: Todo[]
   implementationPlan?: string
 }
 
@@ -162,6 +171,8 @@ export function parseMarkdownToForm(markdown: string, type: DocumentType): FormD
     result.enablers = parseEnablersTable(markdown)
     // Preserve Technical Specifications section from template
     result.technicalSpecifications = extractTechnicalSpecifications(markdown)
+    // To Do items tracked on this capability
+    result.todos = parseTodosTable(markdown)
     // Preserve Development Plan section from template
     result.implementationPlan = extractImplementationPlan(markdown)
   } else if (type === 'enabler') {
@@ -173,6 +184,8 @@ export function parseMarkdownToForm(markdown: string, type: DocumentType): FormD
     result.nonFunctionalRequirements = parseNonFunctionalRequirements(markdown)
     // Preserve Technical Specifications section from template
     result.technicalSpecifications = extractTechnicalSpecifications(markdown)
+    // To Do items tracked on this enabler
+    result.todos = parseTodosTable(markdown)
     // Preserve Development Plan section from template
     result.implementationPlan = extractImplementationPlan(markdown)
   }
@@ -274,6 +287,9 @@ export function convertFormToMarkdown(formData: FormData, type: DocumentType): s
       markdown += generateCapabilityTechnicalSpecificationsTemplate()
     }
 
+    // To Do (always rendered directly below Technical Specifications)
+    markdown += createTodoSection(capData.todos)
+
     // Development Plan (preserved from template)
     if (capData.implementationPlan) {
       markdown += formatImplementationPlan(capData.implementationPlan)
@@ -348,6 +364,9 @@ export function convertFormToMarkdown(formData: FormData, type: DocumentType): s
       // Only add template for completely new enablers (no existing technical specifications)
       markdown += generateEnablerTechnicalSpecificationsTemplate()
     }
+
+    // To Do (always rendered directly below Technical Specifications)
+    markdown += createTodoSection(enbData.todos)
 
     // Development Plan (preserved from template)
     if (enbData.implementationPlan) {
@@ -740,6 +759,188 @@ function extractPurposeFromTechnicalOverview(markdown: string): string {
   return result.join('\n').trim()
 }
 
+// Matches the To Do section heading at any level (# / ## / ###) and tolerates
+// the "To-Do" / "Todo" spellings that may appear in hand-edited documents
+const TODO_SECTION_REGEX = /^#{1,4}\s+To[\s-]?Do\s*$/i
+
+// Sort to dos by their Order column, lowest first, keeping the relative order of ties
+export function sortTodos(todos: Todo[]): Todo[] {
+  return [...todos]
+    .map((todo, index) => ({ todo, index }))
+    .sort((a, b) => {
+      const orderA = Number(a.todo.order) || Number.MAX_SAFE_INTEGER
+      const orderB = Number(b.todo.order) || Number.MAX_SAFE_INTEGER
+      if (orderA !== orderB) return orderA - orderB
+      return a.index - b.index
+    })
+    .map(entry => entry.todo)
+}
+
+export function parseTodosTable(markdown: string): Todo[] {
+  const lines = markdown.split('\n')
+  const sectionIndex = lines.findIndex(line => TODO_SECTION_REGEX.test(line.trim()))
+
+  if (sectionIndex === -1) return []
+
+  const result: Todo[] = []
+  let hasOrderColumn = false
+  let foundHeader = false
+
+  for (let i = sectionIndex + 1; i < lines.length; i++) {
+    const line = lines[i].trim()
+
+    // Stop at the next heading
+    if (line.startsWith('#')) break
+
+    if (!line.startsWith('|')) continue
+
+    // Skip the separator row
+    if (/^\|[\s:|-]+\|$/.test(line)) continue
+
+    const cells = line.split('|').map(cell => cell.trim())
+    if (cells.length > 0 && cells[0] === '') cells.shift()
+    if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop()
+
+    if (!foundHeader) {
+      foundHeader = true
+      // Documents written before the Order column exists start with Name
+      hasOrderColumn = (cells[0] || '').toLowerCase() === 'order'
+      continue
+    }
+
+    const values = hasOrderColumn ? cells.slice(1) : cells
+    const parsedOrder = hasOrderColumn ? parseInt(cells[0], 10) : NaN
+
+    const todo: Todo = {
+      order: Number.isFinite(parsedOrder) && parsedOrder > 0 ? parsedOrder : result.length + 1,
+      name: values[0] || '',
+      description: (values[1] || '').replace(/<br>/g, '\n'),
+      status: values[2] || STATUS_VALUES.TODO.TO_DO
+    }
+
+    // Skip placeholder rows carried over from the template
+    if (!todo.name.trim() && !todo.description.trim()) continue
+
+    result.push(todo)
+  }
+
+  return sortTodos(result)
+}
+
+// Update a single To Do's status in place, leaving the rest of the document byte-identical.
+// Used by the explorer checkbox so toggling a to do never reformats the whole document.
+export function setTodoStatusInMarkdown(markdown: string, todo: Todo, status: string): string {
+  const lines = markdown.split('\n')
+  const sectionIndex = lines.findIndex(line => TODO_SECTION_REGEX.test(line.trim()))
+
+  if (sectionIndex === -1) return markdown
+
+  let hasOrderColumn = false
+  let foundHeader = false
+  let rowIndex = 0
+
+  for (let i = sectionIndex + 1; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+
+    // Stop at the next heading
+    if (trimmed.startsWith('#')) break
+
+    if (!trimmed.startsWith('|')) continue
+
+    // Skip the separator row
+    if (/^\|[\s:|-]+\|$/.test(trimmed)) continue
+
+    const cells = trimmed.split('|').map(cell => cell.trim())
+    if (cells.length > 0 && cells[0] === '') cells.shift()
+    if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop()
+
+    if (!foundHeader) {
+      foundHeader = true
+      hasOrderColumn = (cells[0] || '').toLowerCase() === 'order'
+      continue
+    }
+
+    const values = hasOrderColumn ? cells.slice(1) : cells
+    const name = values[0] || ''
+    const description = (values[1] || '').replace(/<br>/g, '\n')
+
+    // Skip placeholder rows so row numbering matches what was parsed
+    if (!name.trim() && !description.trim()) continue
+
+    rowIndex += 1
+
+    const parsedOrder = hasOrderColumn ? parseInt(cells[0], 10) : NaN
+    const order = Number.isFinite(parsedOrder) && parsedOrder > 0 ? parsedOrder : rowIndex
+
+    if (name !== todo.name || order !== Number(todo.order)) continue
+
+    const newValues = [name, values[1] || '', status]
+    const newCells = hasOrderColumn ? [String(order), ...newValues] : newValues
+    lines[i] = `| ${newCells.join(' | ')} |`
+    return lines.join('\n')
+  }
+
+  return markdown
+}
+
+export function createTodoTable(todos?: Todo[]): string {
+  let table = `| Order | Name | Description | Status |\n`
+  table += `|-------|------|-------------|--------|\n`
+
+  if (!todos || todos.length === 0) {
+    table += `| | | | |\n`
+  } else {
+    sortTodos(todos).forEach((todo, index) => {
+      const order = Number(todo.order) > 0 ? Number(todo.order) : index + 1
+      table += `| ${order} | ${todo.name || ''} | ${(todo.description || '').replace(/\n/g, '<br>')} | ${todo.status || STATUS_VALUES.TODO.TO_DO} |\n`
+    })
+  }
+
+  return table
+}
+
+// Replace just the To Do table in a document, leaving every other section untouched.
+// Adds the section at the end when the document does not have one yet.
+export function upsertTodosInMarkdown(markdown: string, todos: Todo[]): string {
+  const lines = markdown.split('\n')
+  const sectionIndex = lines.findIndex(line => TODO_SECTION_REGEX.test(line.trim()))
+  const tableLines = createTodoTable(todos).replace(/\n$/, '').split('\n')
+
+  if (sectionIndex === -1) {
+    return `${markdown.replace(/\s+$/, '')}\n\n${createTodoSection(todos)}`
+  }
+
+  let tableStart = -1
+  let tableEnd = -1
+
+  for (let i = sectionIndex + 1; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+
+    if (trimmed.startsWith('#')) break
+
+    if (trimmed.startsWith('|')) {
+      if (tableStart === -1) tableStart = i
+      tableEnd = i
+      continue
+    }
+
+    // Anything other than a table row ends the table
+    if (tableStart !== -1) break
+  }
+
+  if (tableStart === -1) {
+    lines.splice(sectionIndex + 1, 0, '', ...tableLines)
+  } else {
+    lines.splice(tableStart, tableEnd - tableStart + 1, ...tableLines)
+  }
+
+  return lines.join('\n')
+}
+
+export function createTodoSection(todos?: Todo[]): string {
+  return `## To Do\n\n${createTodoTable(todos)}\n`
+}
+
 function extractTechnicalSpecifications(markdown: string): string {
   const lines = markdown.split('\n')
   // Look for both H1 and H2 Technical Specifications headings
@@ -763,6 +964,11 @@ function extractTechnicalSpecifications(markdown: string): string {
       sectionLevel = line.startsWith('# ') ? '# ' : '## '
       result.push(line)
       continue
+    }
+
+    // Stop when we hit the To Do section, regardless of heading level
+    if (inSection && TODO_SECTION_REGEX.test(line.trim())) {
+      break
     }
 
     // Stop when we hit another section at the same or higher level
@@ -808,6 +1014,11 @@ function extractImplementationPlan(markdown: string): string {
       sectionName = line.trim()
       result.push(line)
       continue
+    }
+
+    // Stop when we hit the To Do section, regardless of heading level
+    if (inSection && TODO_SECTION_REGEX.test(line.trim())) {
+      break
     }
 
     // Stop when we hit another major section (# or ## level depending on what we're extracting)

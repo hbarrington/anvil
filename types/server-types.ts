@@ -36,6 +36,7 @@ export interface DefaultsConfig {
   designReview?: 'Required' | 'Not Required';
   requirementsReview?: 'Required' | 'Not Required';
   codeReview?: 'Required' | 'Not Required';
+  todoTracking?: boolean;
 }
 
 export interface LoggingConfig {
@@ -77,6 +78,14 @@ export interface DocumentMetadata {
   capabilityId?: string;
   functionalRequirements?: any[];
   nonFunctionalRequirements?: any[];
+  todos?: Todo[];
+}
+
+export interface Todo {
+  order: number;
+  name: string;
+  description: string;
+  status: string;
 }
 
 export interface DocumentItem {
@@ -96,6 +105,7 @@ export interface DocumentItem {
   fullPath?: string;
   upstreamDependencies?: Dependency[];
   downstreamDependencies?: Dependency[];
+  todos?: Todo[];
   metadata?: DocumentMetadata;
 }
 

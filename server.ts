@@ -388,7 +388,8 @@ async function scanDirectory(dirPath: string, baseUrl: string = ''): Promise<Doc
         priority: metadata.priority,
         capabilityId: capabilityId,
         ...(metadata.functionalRequirements && { functionalRequirements: metadata.functionalRequirements }),
-        ...(metadata.nonFunctionalRequirements && { nonFunctionalRequirements: metadata.nonFunctionalRequirements })
+        ...(metadata.nonFunctionalRequirements && { nonFunctionalRequirements: metadata.nonFunctionalRequirements }),
+        todos: metadata.todos || []
       };
 
       items.push(item);
@@ -767,7 +768,79 @@ function extractMetadata(content: string): DocumentMetadata {
     metadata.nonFunctionalRequirements = parseNonFunctionalRequirements(content);
   }
 
+  // To Do items are tracked on both capabilities and enablers
+  metadata.todos = parseTodos(content);
+
   return metadata;
+}
+
+// Matches the To Do section heading at any level and tolerates the
+// "To-Do" / "Todo" spellings that may appear in hand-edited documents
+const TODO_SECTION_REGEX = /^#{1,4}\s+To[\s-]?Do\s*$/i;
+
+// Sort to dos by their Order column, lowest first, keeping the relative order of ties
+function sortTodos(todos: any[]): any[] {
+  return [...todos]
+    .map((todo, index) => ({ todo, index }))
+    .sort((a, b) => {
+      const orderA = Number(a.todo.order) || Number.MAX_SAFE_INTEGER;
+      const orderB = Number(b.todo.order) || Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.index - b.index;
+    })
+    .map(entry => entry.todo);
+}
+
+// Parse the To Do table (Order | Name | Description | Status) from a document
+function parseTodos(markdown: string): any[] {
+  const lines = markdown.split('\n');
+  const sectionIndex = lines.findIndex(line => TODO_SECTION_REGEX.test(line.trim()));
+
+  if (sectionIndex === -1) return [];
+
+  const todos: any[] = [];
+  let hasOrderColumn = false;
+  let foundHeader = false;
+
+  for (let i = sectionIndex + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // Stop at the next heading
+    if (line.startsWith('#')) break;
+
+    if (!line.startsWith('|')) continue;
+
+    // Skip the separator row
+    if (/^\|[\s:|-]+\|$/.test(line)) continue;
+
+    const cells = line.split('|').map(cell => cell.trim());
+    if (cells.length > 0 && cells[0] === '') cells.shift();
+    if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
+
+    if (!foundHeader) {
+      foundHeader = true;
+      // Documents written before the Order column exists start with Name
+      hasOrderColumn = (cells[0] || '').toLowerCase() === 'order';
+      continue;
+    }
+
+    const values = hasOrderColumn ? cells.slice(1) : cells;
+    const parsedOrder = hasOrderColumn ? parseInt(cells[0], 10) : NaN;
+
+    const todo = {
+      order: Number.isFinite(parsedOrder) && parsedOrder > 0 ? parsedOrder : todos.length + 1,
+      name: values[0] || '',
+      description: (values[1] || '').replace(/<br>/g, '\n'),
+      status: values[2] || 'To Do'
+    };
+
+    // Skip placeholder rows carried over from the template
+    if (!todo.name && !todo.description) continue;
+
+    todos.push(todo);
+  }
+
+  return sortTodos(todos);
 }
 
 // Requirement parsing functions
@@ -3633,7 +3706,7 @@ app.get('/api/config/defaults', (req, res) => {
 // Update config defaults
 app.post('/api/config/defaults', async (req, res) => {
   try {
-    const { owner, analysisReview, designReview, requirementsReview, codeReview } = req.body;
+    const { owner, analysisReview, designReview, requirementsReview, codeReview, todoTracking } = req.body;
     
     console.log('[CONFIG] Updating defaults:', req.body);
     
@@ -3664,6 +3737,7 @@ app.post('/api/config/defaults', async (req, res) => {
     if (designReview !== undefined) config.defaults.designReview = designReview;
     if (requirementsReview !== undefined) config.defaults.requirementsReview = requirementsReview;
     if (codeReview !== undefined) config.defaults.codeReview = codeReview;
+    if (todoTracking !== undefined) config.defaults.todoTracking = Boolean(todoTracking);
     
     // Validate the entire updated config before saving
     const validationErrors = validateConfig(config)
@@ -4614,6 +4688,12 @@ ${capabilityData.enablers && capabilityData.enablers.length > 0 ?
   '| TBD | To be determined | Medium |'
 }
 
+## To Do
+
+| Order | Name | Description | Status |
+|-------|------|-------------|--------|
+| | | | |
+
 *Generated from Discovery analysis*`;
 }
 
@@ -4652,6 +4732,12 @@ ${enablerData.requirements && enablerData.requirements.length > 0 ?
 | NFR-001 | Performance and scalability | High | Not Started |
 | NFR-002 | Security and data protection | High | Not Started |
 | NFR-003 | Maintainability and documentation | Medium | Not Started |
+
+## To Do
+
+| Order | Name | Description | Status |
+|-------|------|-------------|--------|
+| | | | |
 
 *Generated from Discovery analysis*`;
 }

@@ -44,7 +44,7 @@ export default function DocumentView(): React.ReactElement {
   const navigate = useNavigate()
   console.log('[DocumentView] Got navigate function')
 
-  const { addToHistory, navigationHistory, refreshData, setSelectedDocument } = useApp()
+  const { addToHistory, navigationHistory, refreshData, setSelectedDocument, config } = useApp()
   console.log('[DocumentView] Got app context')
 
   const [document, setDocument] = useState<DocumentData | null>(null)
@@ -235,6 +235,37 @@ export default function DocumentView(): React.ReactElement {
     }
 
     return currentPath
+  }, [])
+
+  // Remove the To Do section from the rendered document when To Do tracking is disabled
+  const stripTodoSection = useCallback((html: string): string => {
+    if (!html) return html
+
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+
+    const headings = doc.querySelectorAll('h1, h2, h3, h4')
+    for (const heading of Array.from(headings)) {
+      const headingText = (heading.textContent || '').trim()
+      if (!/^to[\s-]?do$/i.test(headingText)) continue
+
+      const headingLevel = parseInt(heading.tagName.substring(1), 10)
+
+      // Remove everything up to the next heading at the same or a higher level
+      let nextElement = heading.nextElementSibling
+      while (nextElement) {
+        const tag = nextElement.tagName
+        if (/^H[1-6]$/.test(tag) && parseInt(tag.substring(1), 10) <= headingLevel) break
+
+        const toRemove = nextElement
+        nextElement = nextElement.nextElementSibling
+        toRemove.remove()
+      }
+
+      heading.remove()
+    }
+
+    return doc.body.innerHTML
   }, [])
 
   // Function to clean up enabler dependency tables in HTML
@@ -510,7 +541,8 @@ export default function DocumentView(): React.ReactElement {
 
       // Clean up enabler dependency tables first, then enhance with file path info
       const cleanedHtml = cleanEnablerDependencyTables(data?.html || '')
-      const enhanced = enhanceHtmlWithFilePath(cleanedHtml, data?.filePath, data?.allFilePaths)
+      const todoAwareHtml = config?.todoTracking === false ? stripTodoSection(cleanedHtml) : cleanedHtml
+      const enhanced = enhanceHtmlWithFilePath(todoAwareHtml, data?.filePath, data?.allFilePaths)
 
       // Use enhanced HTML directly without change detection for internal changes
       let finalHtml = enhanced
@@ -545,7 +577,7 @@ export default function DocumentView(): React.ReactElement {
       setLoading(false)
       console.log('[DocumentView] Loading finished, setting loading to false')
     }
-  }, [path, type, setSelectedDocument, enhanceHtmlWithFilePath, cleanEnablerDependencyTables, isExternalReload])
+  }, [path, type, setSelectedDocument, enhanceHtmlWithFilePath, cleanEnablerDependencyTables, stripTodoSection, config?.todoTracking, isExternalReload])
 
   useEffect(() => {
     loadDocument()

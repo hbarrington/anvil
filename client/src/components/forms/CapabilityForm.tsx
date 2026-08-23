@@ -4,12 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { generateEnablerId } from '../../utils/idGenerator'
 import { stateListenerManager } from '../../utils/stateListeners'
-import { STATUS_VALUES, APPROVAL_VALUES, PRIORITY_VALUES, REVIEW_VALUES } from '../../utils/constants'
+import { STATUS_VALUES, APPROVAL_VALUES, PRIORITY_VALUES, REVIEW_VALUES, TODO_STATUS_OPTIONS } from '../../utils/constants'
 import { apiService } from '../../services/apiService'
 import { SearchableSelect } from '../ui/SearchableSelect'
+import TodoSection from './TodoSection'
 import toast from 'react-hot-toast'
 
-import { CapabilityFormData, Dependency, Enabler, generateCapabilityTechnicalSpecificationsTemplate } from '../../utils/markdownUtils'
+import { CapabilityFormData, Dependency, Enabler, Todo, generateCapabilityTechnicalSpecificationsTemplate } from '../../utils/markdownUtils'
 
 interface CapabilityFormProps {
   data: CapabilityFormData
@@ -40,7 +41,7 @@ interface CapabilityLink {
 
 
 function CapabilityForm({ data, onChange, isNew = false, currentPath = null }: CapabilityFormProps): JSX.Element {
-  const { capabilities, enablers } = useApp()
+  const { capabilities, enablers, config } = useApp()
   const navigate = useNavigate()
   const stateListenerRef = useRef(null)
   const [workspaces, setWorkspaces] = useState<WorkspacesData>({ workspaces: [], activeWorkspaceId: null })
@@ -327,6 +328,11 @@ function CapabilityForm({ data, onChange, isNew = false, currentPath = null }: C
       status: STATUS_VALUES.ENABLER.READY_FOR_ANALYSIS,
       approval: APPROVAL_VALUES.NOT_APPROVED,
       priority: PRIORITY_VALUES.CAPABILITY_ENABLER.HIGH
+    },
+    todo: {
+      name: '',
+      description: '',
+      status: STATUS_VALUES.TODO.TO_DO
     }
   }), [])
 
@@ -415,6 +421,10 @@ function CapabilityForm({ data, onChange, isNew = false, currentPath = null }: C
       onChange({ technicalSpecifications: templateSpecs })
       toast.success('Technical specifications cleared and replaced with template')
     }
+  }, [onChange])
+
+  const handleTodosChange = useCallback((todos) => {
+    onChange({ todos })
   }, [onChange])
 
   // Drag and drop handlers for enablers
@@ -1112,6 +1122,11 @@ function CapabilityForm({ data, onChange, isNew = false, currentPath = null }: C
           </button>
         </div>
       </div>
+
+      {/* To Do */}
+      {config?.todoTracking !== false && (
+        <TodoSection todos={data.todos} onChange={handleTodosChange} />
+      )}
     </div>
   )
 }

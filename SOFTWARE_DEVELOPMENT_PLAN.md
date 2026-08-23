@@ -1177,6 +1177,19 @@ flowchart TD
         EXT2
     end
 ```
+
+## To Do
+
+| Order | Name | Description | Status |
+|-------|------|-------------|--------|
+| | | | |
+
+<!-- To Do Field Definitions:
+- **Order**: Position in the list, starting at 1 for the top item
+- **Name**: Short label for the item of work
+- **Description**: What needs to be done
+- **Status**: To Do | In Progress | Done
+-->
 <!-- END CAPABILITY TEMPLATE -->
 
 ## Enabler Template Structure:
@@ -1304,6 +1317,19 @@ stateDiagram-v2
 
 ## Testing Strategy
 [How this enabler will be tested]
+
+## To Do
+
+| Order | Name | Description | Status |
+|-------|------|-------------|--------|
+| | | | |
+
+<!-- To Do Field Definitions:
+- **Order**: Position in the list, starting at 1 for the top item
+- **Name**: Short label for the item of work
+- **Description**: What needs to be done
+- **Status**: To Do | In Progress | Done
+-->
 <!-- END ENABLER TEMPLATE -->
 
 ---
