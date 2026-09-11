@@ -1,6 +1,6 @@
 # AI AGENT SOFTWARE DEVELOPMENT PLAN
-**Version**: 3.0.2
-**Last Updated**: July 25, 2026
+**Version**: 3.7.0
+**Last Updated**: September 11, 2026
 **Author**: Darcy Davidson
 
 ## Overview
@@ -1273,6 +1273,31 @@ erDiagram
 > - Replace generic or parameterized types (`map[string]interface{}`) with simplified names (`Map`)
 > - Replace qualified types (`sync.Mutex`) with the short name (`Mutex`)
 > - Avoid curly braces `{}`, angle brackets `<>`, and square brackets `[]` inside member definitions
+
+> **Note for AI**: These constraints apply to EVERY mermaid block, not only class
+> diagrams. **A block that fails to parse does not raise a visible error — it
+> renders as raw run-on text.** A broken diagram therefore looks like a
+> formatting slip rather than a defect, and survives review.
+>
+> **1. No semicolons inside labels.** Mermaid treats `;` as a statement
+> separator, so text after it is parsed as a new statement and the block fails.
+> Use a comma, or split the sentence.
+> - ❌  `ST-->>API: success=False; run the export stage first`
+> - ✅  `ST-->>API: success=False, run the export stage first`
+>
+> **2. Entity-relationship attribute keys are `PK`, `FK` and `UK` only**, comma
+> separated when an attribute has more than one. Do not invent combined keys.
+> - ❌  `varchar landing_session_id PK_FK "cascade on delete"`
+> - ✅  `varchar landing_session_id PK, FK "cascade on delete"`
+>
+> **3. Four keywords hijack any block they appear in.** Mermaid selects the
+> diagram type by scanning raw text *before* parsing, so `C4Container`,
+> `C4Component`, `C4Dynamic` and `C4Deployment` route the whole block to the C4
+> parser wherever they occur — inside a member name, a node label, or a comment.
+> The block then fails on its own first line. Backtick-quoting does not help.
+> Rename the identifier in the diagram (`C4_Container`) and state below the
+> diagram that the underscore is a mermaid workaround and the code name differs.
+> `C4Context` is safe; the other four are not.
 
 ```mermaid
 classDiagram

@@ -1,7 +1,7 @@
 # Anvil
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-3.6.0-green.svg)]()
+[![Version](https://img.shields.io/badge/version-3.7.0-green.svg)]()
 
 ## Overview
 
@@ -467,6 +467,7 @@ Anvil supports **workspace-based configuration** for managing multiple document 
 
 ### 📋 **Recent Major Features Summary**
 
+- **v3.7.0**: 📐 **Mermaid Authoring Constraints** - SOFTWARE_DEVELOPMENT_PLAN.md now documents the parse failures that silently render a diagram as run-on text: semicolons inside labels, invented ER attribute keys, and the four C4 keywords that hijack any block containing them
 - **v3.6.0**: ✅ **To Do Tracking** - Track ordered to dos (Order, Name, Description, Status) on every capability and enabler, edit them as a list in Edit mode, browse them in the new explorer TO DO panel, and switch the whole feature on or off from Settings
 - **v3.5.0**: 🔢 **9-Digit ID System** - Upgraded unique ID generation from 6 to 9 digits (CAP-123456789, ENB-987654321, etc.) across all components for enhanced uniqueness and reduced collision probability
 - **v3.4.39**: 📝 **Development Plan Minor Update** - Fixed step numbering and clarified implementation workflow in SOFTWARE_DEVELOPMENT_PLAN.md
@@ -1136,6 +1137,13 @@ Anvil now includes a comprehensive **Claude Code Subagent System** that transfor
 - **REACT + NODE.JS**: Modern full-stack application with React frontend and Node.js Express backend
 
 ## Changelog
+
+### v3.7.0 - Mermaid Authoring Constraints (2026-09-11)
+- **📐 Documentation**: Added a second Note for AI to the Class Diagrams section of SOFTWARE_DEVELOPMENT_PLAN.md covering constraints that apply to every mermaid block, not only class diagrams
+- **⚠️ Rationale**: A mermaid block that fails to parse raises no visible error - it renders as raw run-on text, so a broken diagram reads as a formatting slip rather than a defect and survives review
+- **🚫 Semicolons**: Mermaid treats `;` as a statement separator, so a semicolon inside a label fails the block; use a comma or split the sentence
+- **🔑 ER Keys**: Entity-relationship attribute keys are `PK`, `FK` and `UK` only, comma separated when an attribute has more than one - combined keys such as `PK_FK` are not valid
+- **🏴 C4 Keywords**: `C4Container`, `C4Component`, `C4Dynamic` and `C4Deployment` route the whole block to the C4 parser wherever they appear, including inside member names and comments; rename the identifier in the diagram and note the workaround below it. `C4Context` is unaffected
 
 ### v3.6.0 - To Do Tracking (2026-08-22)
 - **✨ Feature**: Added a `## To Do` section to capability and enabler documents, positioned below Technical Specifications
