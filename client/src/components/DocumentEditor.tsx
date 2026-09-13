@@ -368,15 +368,18 @@ export default function DocumentEditor(): JSX.Element {
 
       refreshData()
       
-      const filename = savePath!.split('/').pop()!.split('\\').pop()!
+      // Keep the full relative path. Reducing it to the bare filename loses the
+      // directory, so the sidebar can no longer match the saved document and the
+      // view route no longer addresses documents held in sub-directories.
+      const documentPath = savePath!.replace(/\\/g, '/')
 
       setSelectedDocument({
         type: type as 'capability' | 'enabler',
-        path: filename,
-        id: formData.name || formData.id || filename
+        path: documentPath,
+        id: formData.name || formData.id || documentPath
       })
 
-      navigate(`/view/${type}/${filename}`)
+      navigate(`/view/${type}/${documentPath}`)
       
     } catch (err) {
       toast.error(`Failed to save document: ${(err as Error).message}`)

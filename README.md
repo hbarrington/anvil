@@ -1,7 +1,7 @@
 # Anvil
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-3.7.0-green.svg)]()
+[![Version](https://img.shields.io/badge/version-3.7.1-green.svg)]()
 
 ## Overview
 
@@ -467,6 +467,7 @@ Anvil supports **workspace-based configuration** for managing multiple document 
 
 ### 📋 **Recent Major Features Summary**
 
+- **v3.7.1**: 🐛 **Document Switching Fix** - Saving an enabler no longer snaps the view and the explorer selection back to the previous document; queued reloads are cancelled on navigation, stale responses are discarded, and duplicate file-change broadcasts are collapsed
 - **v3.7.0**: 📐 **Mermaid Authoring Constraints** - SOFTWARE_DEVELOPMENT_PLAN.md now documents the parse failures that silently render a diagram as run-on text: semicolons inside labels, invented ER attribute keys, and the four C4 keywords that hijack any block containing them
 - **v3.6.0**: ✅ **To Do Tracking** - Track ordered to dos (Order, Name, Description, Status) on every capability and enabler, edit them as a list in Edit mode, browse them in the new explorer TO DO panel, and switch the whole feature on or off from Settings
 - **v3.5.0**: 🔢 **9-Digit ID System** - Upgraded unique ID generation from 6 to 9 digits (CAP-123456789, ENB-987654321, etc.) across all components for enhanced uniqueness and reduced collision probability
@@ -1137,6 +1138,15 @@ Anvil now includes a comprehensive **Claude Code Subagent System** that transfor
 - **REACT + NODE.JS**: Modern full-stack application with React frontend and Node.js Express backend
 
 ## Changelog
+
+### v3.7.1 - Document Switching Fix (2026-09-13)
+- **🐛 Fix**: Selecting a different enabler after a save no longer reverts to the previously viewed document. A reload queued by a file-change event was cancelled only when its listener was removed, so the timer still fired and reloaded the document that had just been left, taking the explorer selection with it
+- **🐛 Fix**: The view state can no longer drift out of step with the URL. Previously a reverted selection left the route pointing at the enabler the user had chosen, so clicking that enabler again was a no-op and recovery needed a detour through a third document
+- **🛡️ Stale Responses**: `DocumentView` now tags each load and discards any response, error, or spinner update belonging to a load that a newer one has superseded, so a slow request cannot overwrite the document on screen
+- **🔁 Reload Amplification**: `isExternalReload` moved from state to a ref. As a dependency of the load callback it re-created that callback on every change and re-ran the load effect, turning one file-change event into three document loads
+- **📦 Event Coalescing**: The websocket reload timer is now a single pending timer that resets on each event, collapsing the burst a save produces into one reload
+- **📡 Duplicate Broadcasts**: `broadcastFileChange` normalises paths and suppresses an identical change for the same file within 1.5s, so a write reported by both the save endpoint and the file watcher reaches clients once
+- **📁 Sub-directory Paths**: Saving from the editor keeps the document's full relative path instead of reducing it to the bare filename, which had broken explorer highlighting and the view route for documents held in sub-directories
 
 ### v3.7.0 - Mermaid Authoring Constraints (2026-09-11)
 - **📐 Documentation**: Added a second Note for AI to the Class Diagrams section of SOFTWARE_DEVELOPMENT_PLAN.md covering constraints that apply to every mermaid block, not only class diagrams

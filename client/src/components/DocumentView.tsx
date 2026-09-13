@@ -54,8 +54,21 @@ export default function DocumentView(): React.ReactElement {
   const [previousContent, setPreviousContent] = useState<string>('')
   const [previousPath, setPreviousPath] = useState<string>('')
   const [changedElements, setChangedElements] = useState<Set<string>>(new Set())
-  const [isExternalReload, setIsExternalReload] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+
+  // Marks the next load as triggered by an external file change rather than by
+  // navigation. Held in a ref so flipping it never re-creates loadDocument and
+  // re-triggers the load effect.
+  const isExternalReloadRef = useRef(false)
+  // Increments on every load so a slow response from a document we have already
+  // navigated away from can be discarded instead of overwriting the current one.
+  const requestIdRef = useRef(0)
+  // The pending websocket-triggered reload, so it can be cancelled when the
+  // document changes and coalesced when a save produces several file events.
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Always points at the latest loadDocument so a queued reload never runs a
+  // closure bound to a previously viewed document.
+  const loadDocumentRef = useRef<(() => Promise<void>) | null>(null)
 
   console.log('[DocumentView] Component mounted/updated with params:', { type, path })
 
@@ -532,12 +545,23 @@ export default function DocumentView(): React.ReactElement {
 
   const loadDocument = useCallback(async () => {
     console.log('[DocumentView] loadDocument called with path:', path, 'type:', type)
+
+    // Claim this load. Any load started afterwards makes this one stale, and a
+    // stale response must not touch component state or the sidebar selection.
+    const requestId = ++requestIdRef.current
+    const isStale = (): boolean => requestId !== requestIdRef.current
+
     try {
       setLoading(true)
       setError(null)
       console.log('[DocumentView] Making API call to:', path)
       const data = await apiService.getFile(path!)
       console.log('[DocumentView] API response received:', data ? 'Success' : 'No data')
+
+      if (isStale()) {
+        console.log('[DocumentView] Discarding stale response for:', path)
+        return
+      }
 
       // Clean up enabler dependency tables first, then enhance with file path info
       const cleanedHtml = cleanEnablerDependencyTables(data?.html || '')
@@ -557,9 +581,7 @@ export default function DocumentView(): React.ReactElement {
       setDocument(data)
 
       // Reset external reload flag after loading
-      if (isExternalReload) {
-        setIsExternalReload(false)
-      }
+      isExternalReloadRef.current = false
 
       // Set the selected document for highlighting in sidebar
       setSelectedDocument({
@@ -569,15 +591,29 @@ export default function DocumentView(): React.ReactElement {
       })
       console.log('[DocumentView] Document loaded successfully')
     } catch (err) {
+      if (isStale()) {
+        console.log('[DocumentView] Discarding stale error for:', path)
+        return
+      }
       console.error('[DocumentView] Error loading document:', err)
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setError(errorMessage)
       toast.error(`Failed to load document: ${errorMessage}`)
     } finally {
-      setLoading(false)
-      console.log('[DocumentView] Loading finished, setting loading to false')
+      // A stale load must not clear the spinner belonging to the load that
+      // superseded it.
+      if (!isStale()) {
+        setLoading(false)
+        console.log('[DocumentView] Loading finished, setting loading to false')
+      }
     }
-  }, [path, type, setSelectedDocument, enhanceHtmlWithFilePath, cleanEnablerDependencyTables, stripTodoSection, config?.todoTracking, isExternalReload])
+  }, [path, type, setSelectedDocument, enhanceHtmlWithFilePath, cleanEnablerDependencyTables, stripTodoSection, config?.todoTracking])
+
+  // Keep the ref pointing at the current loadDocument so queued reloads always
+  // load the document that is on screen now.
+  useEffect(() => {
+    loadDocumentRef.current = loadDocument
+  }, [loadDocument])
 
   useEffect(() => {
     loadDocument()
@@ -607,18 +643,35 @@ export default function DocumentView(): React.ReactElement {
           console.log('Current document changed, reloading:', data.filePath)
 
           // Mark this as an external reload to prevent duplicate overlays
-          setIsExternalReload(true)
+          isExternalReloadRef.current = true
+
+          // A single save writes the enabler and its parent capability, and each
+          // write is reported by both the save endpoint and the file watcher, so
+          // collapse that burst of events into a single reload.
+          if (reloadTimerRef.current) {
+            clearTimeout(reloadTimerRef.current)
+          }
 
           // Add a small delay to ensure file writes are complete
-          setTimeout(() => {
-            loadDocument()
+          reloadTimerRef.current = setTimeout(() => {
+            reloadTimerRef.current = null
+            loadDocumentRef.current?.()
           }, 500)
         }
       }
     })
 
-    return removeListener
-  }, [path, loadDocument])
+    return () => {
+      removeListener()
+      // Drop any reload still queued for the document we are leaving. Left to
+      // run it lands after the next document has loaded and drags both the
+      // content and the sidebar selection back to the previous document.
+      if (reloadTimerRef.current) {
+        clearTimeout(reloadTimerRef.current)
+        reloadTimerRef.current = null
+      }
+    }
+  }, [path])
 
   // Listen for external change events from AppContext
   useEffect(() => {

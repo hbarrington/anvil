@@ -4770,8 +4770,34 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'connected', message: 'WebSocket connected' }));
 });
 
+// Every write is reported twice: once explicitly by the endpoint that made it
+// and once by the file watcher. Recent broadcasts are remembered here so the
+// duplicate is dropped instead of driving a second reload in every client.
+const recentBroadcasts = new Map();
+const BROADCAST_DEDUPE_WINDOW_MS = 1500;
+
 // Function to broadcast file changes to all connected clients
 function broadcastFileChange(changeType, filePath) {
+  // Endpoints pass native paths while the watcher passes normalised ones, so
+  // normalise here to make both spellings of the same file compare equal.
+  filePath = String(filePath || '').replace(/\\/g, '/');
+
+  const dedupeKey = `${changeType}:${filePath.toLowerCase()}`;
+  const now = Date.now();
+
+  // Drop entries that have aged out so the map cannot grow without bound
+  for (const [key, timestamp] of recentBroadcasts) {
+    if (now - timestamp > BROADCAST_DEDUPE_WINDOW_MS) {
+      recentBroadcasts.delete(key);
+    }
+  }
+
+  if (recentBroadcasts.has(dedupeKey)) {
+    console.log(`[WEBSOCKET] Skipping duplicate file-change within ${BROADCAST_DEDUPE_WINDOW_MS}ms:`, dedupeKey);
+    return;
+  }
+  recentBroadcasts.set(dedupeKey, now);
+
   if (wss) {
     const message = JSON.stringify({
       type: 'file-change',
